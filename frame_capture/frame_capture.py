@@ -2,11 +2,11 @@ import numpy as np
 import cv2
 
 class FrameCapturer:
-    def __init__(self, fps = 5):
+    def __init__(self, greyscale = False, fps = 5):
         # Initiation of fps and the capturer
         self.fps = fps
         self.capturer = cv2.VideoCapture(0)
-        self.quit = False
+        self.grayscale = grayscale
     
     def __del__(self):
         self.capturer.release()
@@ -14,21 +14,23 @@ class FrameCapturer:
     
     def get_frame(self):
         ret, frame = self.capturer.read()
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        return gray
+        if self.grayscale:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        return frame
 
 
 if __name__ == '__main__':
     fc = FrameCapturer()
     
     # Capture frame-by-frame
-    gray = fc.get_frame()
+    #gray = fc.get_frame()
 
     # Our operations on the frame come here
     
 
     # Display the resulting frame
     while True:
+        gray = fc.get_frame()
         cv2.imshow('frame',gray)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
