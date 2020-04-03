@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 class FrameCapturer:
-    def __init__(self, greyscale = False, fps = 5):
+    def __init__(self, grayscale = False, fps = 5):
         # Initiation of fps and the capturer
         self.fps = fps
         self.capturer = cv2.VideoCapture(0)
