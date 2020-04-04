@@ -14,7 +14,7 @@ class Filter:
         self.data = np.empty([N, *shape])
 
     def add_data(self, new_data):
-        # Add new bounding box from external
+        # Add new data box from external
         self.data = self.rotate_and_add_to_array(self.data, new_data)
         self.smoothen()
 
