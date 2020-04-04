@@ -48,9 +48,23 @@ class CaffeProcessor():
         box = detections[0, 0, np.argmax(confidences), 3:7] * np.array([self.w, self.h, self.w, self.h])
         return box.astype('int')
 
-    def process_frame(self, frame):
+    def get_bbox(self, frame):
         self.get_size_of_frame(frame)
         blob = self.get_blob_from_frame(frame)
         self.detector.setInput(blob)
         detections = self.detector.forward()
         return self.most_confident_face(detections)
+
+    def get_center(self, bbox):
+        w = bbox[2] - bbox[0]
+        h = bbox[3] - bbox[1]
+        return (int(round(bbox[0] + w/2)), int(round(bbox[1] + h/2)))
+
+    def get_area(self, bbox):
+        w = bbox[2] - bbox[0]
+        h = bbox[3] - bbox[1]
+        return w*h
+
+    def get_face(self, bbox, frame):
+        x, y, x2, y2 = bbox
+        return frame[y:y2, x:x2]
