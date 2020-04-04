@@ -36,6 +36,10 @@ class Decision_maker:
         '''
         Set reference values for face distance, head angle and face height.
         Must be called before adding data. 
+        Input:
+            face_distance_ref - double
+            face_height_ref - np.array([row, pitch, yaw])
+            head_angle_ref - double
         '''
         self.face_distance_ref = face_distance_ref
         self.face_height_ref = face_height_ref
