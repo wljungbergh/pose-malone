@@ -5,15 +5,15 @@ from PyQt5 import QtCore
 import sys
 
 class StartWindow(QDialog):
-    def __init__(self):
+    def __init__(self, desktop_width, desktop_height):
         super().__init__()
-        self.title = "Pose Malone"
-        self.top = 200
-        self.left = 500
-        self.width = 400
-        self.height = 300
+        self.title = "Welcome!"
+        self.width = 720
+        self.height = 405
+        self.top = desktop_height/2 - self.height/2
+        self.left = desktop_width/2 - self.width/2
         self.init_window()
-        self.loading_window = LoadingWindow()
+        self.loading_window = LoadingWindow(desktop_width, desktop_height)
 
     def init_window(self):
         self.setWindowIcon(QtGui.QIcon("doc/icon_images/icon.png"))
@@ -45,13 +45,13 @@ class StartWindow(QDialog):
         self.loading_window.show_window()
 
 class LoadingWindow(QDialog):
-    def __init__(self):
+    def __init__(self, desktop_width, desktop_height):
         super().__init__()
-        self.title = "Pose Malone"
-        self.top = 200
-        self.left = 500
-        self.width = 400
-        self.height = 300
+        self.title = "Initializing..."
+        self.width = 720
+        self.height = 405
+        self.top = desktop_height/2 - self.height/2
+        self.left = desktop_width/2 - self.width/2
         self.init_window()
 
     def init_window(self):
@@ -102,9 +102,25 @@ class StatusBar():
     def exit_app(self):
         QtCore.QCoreApplication.exit()
 
-app = QApplication([])
-app.setStyle('Fusion')
-app.setQuitOnLastWindowClosed(False)
-start_window = StartWindow()
-status_bar = StatusBar()
-app.exec()
+
+class GUI():
+    def __init__(self):
+        app = QApplication([])
+        app.setStyle('Fusion')
+        app.setQuitOnLastWindowClosed(False)
+        
+        screen_res = app.desktop().screenGeometry()
+        desktop_width = screen_res.width()
+        desktop_height = screen_res.height()
+        
+        start_window = StartWindow(desktop_width, desktop_height)
+        status_bar = StatusBar()
+        
+        app.exec()
+
+
+
+if __name__ == "__main__":
+
+    gui = GUI()
+    pass
