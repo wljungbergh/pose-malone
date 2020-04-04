@@ -1,8 +1,6 @@
 import os
 import numpy as np
 
-
-
 class Decision_maker:
 
     def __init__(self, samples_to_keep, tolarance):
@@ -17,7 +15,7 @@ class Decision_maker:
     def find_face_distance_deviation(self):
         face_distance_dev = np.max(self.face_distances) - np.min(self.face_distances)
         if face_distance_dev > self.tol:
-            self.notify("Your posture suckz", "Pose Malone")
+            self.notify("Pose Malone", "Think about your posture :)")
 
     '''
     Sends a OS X style notification to the user
