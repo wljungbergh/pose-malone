@@ -2,7 +2,7 @@ import os
 import time
 import numpy as np
 
-class Decision_maker:
+class DecisionMaker:
 
     def __init__(self, samples_to_keep, distance_tolerance, head_angle_tolerance, face_height_tolerance, time_limit):
         '''
