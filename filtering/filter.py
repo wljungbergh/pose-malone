@@ -5,36 +5,25 @@ Keeps track of given number of bounding boxes and their area. Outputs face dista
 '''
 class Filter:
 
-    def __init__(self, samples_to_keep):
+    def __init__(self, samples_to_keep, shape = [1]):
         # Data-samples to use
         N = samples_to_keep
-        # Raw face_distance at all time instances
-        self.face_distance = 0
-        # Raw bounding boxes used as [x, y, width, height]
-        self.bounding_boxes = np.empty([N, 4])
-        # Areas for corresponding bounding boxes
-        self.bounding_box_areas = np.empty([N, 1])
+        # Raw data
+        self.data = np.empty([N, *shape])
 
-    def add_bounding_box(self, new_bounding_box):
+    def add_data(self, new_data):
         # Add new bounding box from external
-        self.bounding_boxes = self.rotate_and_add_to_array(self.bounding_boxes, new_bounding_box)
-        # Update areas to match bounding_boxes
-        self.update_areas()
+        self.data = self.rotate_and_add_to_array(self.data, new_data)
+        self.smoothen()
 
-    def update_areas(self):
-        # Area is width * height
-        area = self.bounding_boxes[0][2] * self.bounding_boxes[0][3]
-        self.bounding_box_areas = self.rotate_and_add_to_array(self.bounding_box_areas, area)
-        # Calculate new smooth face_distance based on current bounding_box_areas
-        self.update_face_distance()
+    def smoothen(self):
+        self.smooth_data = np.mean(self.data, axis=0)
 
-    def update_face_distance(self):
-        self.face_distance = np.mean(self.bounding_box_areas)
-
-    def get_face_distance(self):
-        return self.face_distance
+    def get_smooth_data(self):
+        return self.smooth_data
 
     def rotate_and_add_to_array(self, array, new_element, shift = 1, axis = 0):
-        array = np.roll(array, 1, 0)
+        array = np.roll(array, shift, axis)
         array[0] = new_element
         return array
+
