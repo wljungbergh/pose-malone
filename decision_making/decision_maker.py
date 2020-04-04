@@ -97,7 +97,7 @@ class DecisionMaker:
         print("2: {}".format(self.time_limit))
         print("3: {}".format(self.last_notification_time))
 
-        if self.start_of_bad_posture is None and (self.timestamps[0] - self.last_notification_time) > self.time_limit:
+        if self.start_of_bad_posture is None:
             self.start_of_bad_posture = self.timestamps[0]
             return True
         elif (self.timestamps[0] - self.start_of_bad_posture) < self.time_limit or (self.timestamps[0] - self.last_notification_time) < self.time_limit:
