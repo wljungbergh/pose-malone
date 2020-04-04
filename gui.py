@@ -3,6 +3,97 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5 import QtCore
 import sys
+import time
+
+from decision_making.decision_maker import DecisionMaker
+from filtering.filter import Filter
+from frame_capture.frame_capture import FrameCapturer
+from headpose_estimator.headpose_estimator import HeadPoseEstimator
+from frame_processing.frame_processing import CaffeProcessor
+from notifier.notifier import MacOSNotifier
+
+
+# GLOBAL VARIABLES
+REF_POS = []
+REF_AREA = []
+REF_HEAD_POSE = []
+
+N = 30
+# Initialize stuff
+print("Loading FrameCapturer ...")
+fc = FrameCapturer()
+print("Loading FrameProccessor ...")
+fp = CaffeProcessor()
+print("Loading HeadPoseEstimator ...")
+hpe = HeadPoseEstimator()
+print("Loading Filters ...")
+pos_y_filter = Filter(N)
+area_filter = Filter(N)
+roll_filter = Filter(N)
+pitch_filter = Filter(N)
+
+print("Loading DecisionMaker ...")
+dm = DecisionMaker(10, 0.1, 0.1, 0.1, 5)
+print("Loading MacOSNotifier ...")
+notifier = MacOSNotifier()
+
+
+def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstimator):
+    # Initialize posture values 
+    t = time.time() 
+    init_counter = 0
+    tot_centerX = 0
+    tot_centerY = 0
+    tot_area = 0
+    tot_yaw = 0
+    tot_pitch = 0
+    tot_roll = 0
+
+    while time.time() < t + 10:
+        init_counter += 1.0
+        
+        frame = fc.get_frame()
+        frame_copy = frame.copy()
+
+        bbox = fp.get_bbox(frame)
+        face = fp.get_face(bbox, frame_copy)
+        centerX, centerY = fp.get_center(bbox)
+        tot_centerX += centerX
+        tot_centerY += centerY
+        tot_area += fp.get_area(bbox)
+        #(yaw, pitch, roll), _  = hpe.estimate_headpose(face)
+        #tot_pitch += pitch
+        #tot_roll += roll
+        #tot_yaw += yaw
+
+
+    global REF_POS
+    global REF_AREA
+    global REF_HEAD_POSE
+
+    REF_POS = (tot_centerX/init_counter, tot_centerY/init_counter)
+    REF_AREA = tot_area/init_counter
+    #REF_HEAD_POSE = np.array([tot_yaw/init_counter, tot_pitch/init_counter, tot_roll/init_counter])
+
+
+
+class Worker(QtCore.QRunnable):
+    '''
+    Worker thread
+    '''
+
+    @QtCore.pyqtSlot()
+    def run(self):
+        '''
+        Your code goes in this function
+        '''
+        print("Thread start") 
+        time.sleep(5)
+
+        initialize_posture(fc, fp, hpe)
+        
+        print("Thread complete")
+        
 
 class StartWindow(QDialog):
     def __init__(self, desktop_width, desktop_height):
@@ -12,6 +103,8 @@ class StartWindow(QDialog):
         self.height = 405
         self.top = desktop_height/2 - self.height/2
         self.left = desktop_width/2 - self.width/2
+
+
         self.init_window()
         self.loading_window = LoadingWindow(desktop_width, desktop_height)
 
@@ -38,6 +131,9 @@ class StartWindow(QDialog):
 
         self.show()
 
+    def init_main(self):
+        worker = Worker()
+        self.threadpool.start(worker)
 
     def on_click(self):
         print('CLICK')
@@ -52,9 +148,14 @@ class LoadingWindow(QDialog):
         self.height = 405
         self.top = desktop_height/2 - self.height/2
         self.left = desktop_width/2 - self.width/2
+
+        self.threadpool = QtCore.QThreadPool()
+        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+
         self.init_window()
 
     def init_window(self):
+
         self.setWindowIcon(QtGui.QIcon("doc/icon_images/icon.png"))
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
@@ -74,6 +175,8 @@ class LoadingWindow(QDialog):
 
     def show_window(self):
         self.show()
+        worker = Worker()
+        self.threadpool.start(worker)
 
 
 class StatusBar():
@@ -105,22 +208,29 @@ class StatusBar():
 
 class GUI():
     def __init__(self):
-        app = QApplication([])
-        app.setStyle('Fusion')
-        app.setQuitOnLastWindowClosed(False)
-        
-        screen_res = app.desktop().screenGeometry()
+        self.app = QApplication([])
+        self.app.setStyle('Fusion')
+        self.app.setQuitOnLastWindowClosed(False)
+        self.start_gui()  
+
+
+    def start_gui(self):
+        screen_res = self.app.desktop().screenGeometry()
         desktop_width = screen_res.width()
         desktop_height = screen_res.height()
         
         start_window = StartWindow(desktop_width, desktop_height)
         status_bar = StatusBar()
-        
-        app.exec()
+        self.app.exec()
 
 
 
 if __name__ == "__main__":
 
     gui = GUI()
+
+    print(REF_POS,
+            REF_AREA,
+            REF_HEAD_POSE)
+
     pass
