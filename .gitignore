@@ -2,6 +2,8 @@
 # Created by https://www.gitignore.io/api/macos,python,opencv,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=macos,python,opencv,visualstudiocode
 
+.vscode/
+
 ### macOS ###
 # General
 .DS_Store
