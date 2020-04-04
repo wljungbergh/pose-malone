@@ -76,7 +76,7 @@ if __name__ == '__main__':
     
     
     print("Loading DecisionMaker ...")
-    dm = DecisionMaker(10, 0.1, 0.1, 0.1, 5)
+    dm = DecisionMaker(10, 5, 5, 1, 5)
     print("Loading MacOSNotifier ...")
     notifier = MacOSNotifier()
     
@@ -106,6 +106,7 @@ if __name__ == '__main__':
         area = fp.get_area(bbox)
         area_filter.add_data(sqrt(area))
         print("ypos: {}".format(center[1]))
+        print("area: {}".format(sqrt(area)))
         pos_y_filter.add_data(center[1])
         # render if neccessary
         if render: 
@@ -118,7 +119,7 @@ if __name__ == '__main__':
             imshow('Frame', frame)
             
         if face.shape[0]>100 and face.shape[1]>100:
-            (_, pitch, roll), img = hpe.estimate_headpose(face, render)
+            (yaw, pitch, roll), img = hpe.estimate_headpose(face, render)
             pitch_filter.add_data(pitch)
             roll_filter.add_data(roll)
             if render:
@@ -128,11 +129,11 @@ if __name__ == '__main__':
             if render:
                 imshow('Face', BLACK_SCREEN)
         
-        
-        good_posture = dm.add_data(area_filter.get_smooth_data(), 0, pos_y_filter.get_smooth_data())
+        head_pos = [0, pitch_filter.get_smooth_data(), roll_filter.get_smooth_data()]
+        good_posture = dm.add_data(area_filter.get_smooth_data(), np.array(head_pos), pos_y_filter.get_smooth_data())
         print("Good posture? {}".format(good_posture))
-        if not good_posture:
-            notifier.send_notification(1, "Pose Malone Says")
+        #if not good_posture:
+        #    notifier.send_notification(1, "Pose Malone Says")
 
         if waitKey(1) & 0xFF == ord('q'):
             break

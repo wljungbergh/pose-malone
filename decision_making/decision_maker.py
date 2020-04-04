@@ -19,7 +19,7 @@ class DecisionMaker:
         self.face_distance_tol = distance_tolerance
 
         # roll, pitch, yaw
-        self.head_angle = np.zeros([N,1])
+        self.head_angle = np.zeros([N,3])
         self.head_angle_tol = head_angle_tolerance
 
         self.face_height = np.zeros([N,1])
@@ -60,6 +60,7 @@ class DecisionMaker:
         '''
         self.add_face_distance(face_dist)
         self.add_head_angle(head_angle)
+        
         self.add_face_height(face_height)
         self.add_timestamp(time.time())
         return self.evalute_data()
@@ -82,6 +83,7 @@ class DecisionMaker:
         head_angle_ok = self.check_head_angle()
         
         if face_dist_ok and face_height_ok and head_angle_ok:
+            print("hello world")
             self.start_of_bad_posture = None
             return True
         else:
@@ -93,14 +95,11 @@ class DecisionMaker:
 
 
     def check_time(self):
-        print("1: {}".format(self.start_of_bad_posture))
-        print("2: {}".format(self.time_limit))
-        print("3: {}".format(self.last_notification_time))
-
-        if self.start_of_bad_posture is None:
+        
+        if self.start_of_bad_posture is None: #and (self.timestamps[0] - self.last_notification_time) < self.time_limit:
             self.start_of_bad_posture = self.timestamps[0]
             return True
-        elif (self.timestamps[0] - self.start_of_bad_posture) < self.time_limit or (self.timestamps[0] - self.last_notification_time) < self.time_limit:
+        elif (self.timestamps[0] - self.start_of_bad_posture) < self.time_limit: # or (self.timestamps[0] - self.last_notification_time) > self.time_limit:
             return True
         else:
             self.start_of_bad_posture = None
@@ -122,7 +121,7 @@ class DecisionMaker:
 
     def check_head_angle(self):
         relative_angle = self.head_angle[0]-self.head_angle_ref
-        off_angle = np.sqrt(relative_angle[0]**2 + relative_angle[1]**2)
+        off_angle = np.sqrt(relative_angle[1]**2 + relative_angle[2]**2)
         if off_angle > self.head_angle_tol:
             return False
         else:
