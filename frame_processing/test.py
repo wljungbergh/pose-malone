@@ -1,6 +1,8 @@
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(),'frame_capture')))
 print(sys.path)
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(),'headpose_estimator')))
+import headpose_estimator
 
 from cv2 import FONT_HERSHEY_SIMPLEX
 from cv2 import imread
@@ -17,7 +19,7 @@ import numpy as np
 
 capturer = FrameCapturer()
 detector = CaffeProcessor()
-
+hp = headpose_estimator.HeadPoseEstimator()
 black_screen = np.ones((400,400,3))*int(255)
 
 while True:
@@ -38,10 +40,11 @@ while True:
     imshow('Frame', frame)
     print(face.shape[0], face.shape[1])
     if face.shape[0]>100 and face.shape[1]>100:
-        imshow('Face', face)
+        p, img = hp.estimate_headpose(face, render = True)
+        imshow('Face', img)
+        
     else:
         imshow('Face', black_screen)
-
     if waitKey(1) & 0xFF == ord('q'):
         break
 
