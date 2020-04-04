@@ -35,7 +35,7 @@ def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstim
     tot_pitch = 0
     tot_roll = 0
 
-    while time.time() < t + 20:
+    while time.time() < t + 5:
         init_counter += 1.0
         
         frame = fc.get_frame()
@@ -60,10 +60,8 @@ def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstim
     return pos, area, head_pose
 
 if __name__ == '__main__':
-    N = 30
-    t = time.time()
+    N = 2
     # Initialize stuff
-    t = time.time()
     print("Loading FrameCapturer ...")
     fc = FrameCapturer()
     print("Loading FrameProccessor ...")
@@ -75,17 +73,22 @@ if __name__ == '__main__':
     area_filter = Filter(N)
     roll_filter = Filter(N)
     pitch_filter = Filter(N)
-
+    
     
     print("Loading DecisionMaker ...")
     dm = DecisionMaker(10, 0.1, 0.1, 0.1, 5)
     print("Loading MacOSNotifier ...")
     notifier = MacOSNotifier()
-    print(time.time() - t)
+    
 
     # Initialize posture    
+    print("Starting initialize posture...")
     (posX, posY), area, head_pose = initialize_posture(fc, fp, hpe)
+    print("Finished initialize posture...")
     # Set refrence posture accordingly
+    print("posY ref: {}".format(posY))
+    print("area ref: {}".format(area))
+    print("head_pose ref: {}".format(head_pose))
     dm.set_references(sqrt(area), head_pose, posY)
 
 
@@ -102,6 +105,7 @@ if __name__ == '__main__':
         center = fp.get_center(bbox)
         area = fp.get_area(bbox)
         area_filter.add_data(sqrt(area))
+        print("ypos: {}".format(center[1]))
         pos_y_filter.add_data(center[1])
         # render if neccessary
         if render: 
@@ -118,21 +122,20 @@ if __name__ == '__main__':
             pitch_filter.add_data(pitch)
             roll_filter.add_data(roll)
             if render:
-                imshow('Face', img)
+                imshow('Face', face)
             
         else:
             if render:
                 imshow('Face', BLACK_SCREEN)
         
-        head_angle = sqrt(roll_filter.get_smooth_data()**2 + pitch_filter.get_smooth_data()**2)
-        good_posture = dm.add_data(area_filter.get_smooth_data(), head_angle, pos_y_filter.get_smooth_data())
         
+        good_posture = dm.add_data(area_filter.get_smooth_data(), 0, pos_y_filter.get_smooth_data())
+        print("Good posture? {}".format(good_posture))
         if not good_posture:
             notifier.send_notification(1, "Pose Malone Says")
 
         if waitKey(1) & 0xFF == ord('q'):
             break
-
 
     
 print("DONE...")

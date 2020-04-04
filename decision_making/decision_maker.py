@@ -19,7 +19,7 @@ class DecisionMaker:
         self.face_distance_tol = distance_tolerance
 
         # roll, pitch, yaw
-        self.head_angle = np.zeros([N,3])
+        self.head_angle = np.zeros([N,1])
         self.head_angle_tol = head_angle_tolerance
 
         self.face_height = np.zeros([N,1])
@@ -80,7 +80,7 @@ class DecisionMaker:
         face_dist_ok = self.check_face_distance()
         face_height_ok = self.check_face_height()
         head_angle_ok = self.check_head_angle()
-
+        
         if face_dist_ok and face_height_ok and head_angle_ok:
             self.start_of_bad_posture = None
             return True
@@ -93,6 +93,10 @@ class DecisionMaker:
 
 
     def check_time(self):
+        print("1: {}".format(self.start_of_bad_posture))
+        print("2: {}".format(self.time_limit))
+        print("3: {}".format(self.last_notification_time))
+
         if self.start_of_bad_posture is None and (self.timestamps[0] - self.last_notification_time) > self.time_limit:
             self.start_of_bad_posture = self.timestamps[0]
             return True
