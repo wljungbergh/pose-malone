@@ -8,6 +8,8 @@ class Filter:
     def __init__(self, samples_to_keep, shape = [1]):
         # Data-samples to use
         N = samples_to_keep
+        # Shape 
+        self.shape = shape
         # Raw data
         self.data = np.empty([N, *shape])
 
