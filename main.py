@@ -12,6 +12,7 @@ from frame_processing.frame_processing import CaffeProcessor
 from notifier.notifier import MacOSNotifier
 
 import time
+from math import sqrt
 
 from cv2 import FONT_HERSHEY_SIMPLEX
 from cv2 import imread, imshow
@@ -23,31 +24,7 @@ from cv2 import destroyAllWindows
 BLACK_SCREEN = np.ones((400,400,3))*int(255)
 
 
-
-
-
-
-
-if __name__ == '__main__':
-    
-    t = time.time()
-    # Initialize stuff
-    t = time.time()
-    print("Loading FrameCapturer ...")
-    fc = FrameCapturer()
-    print("Loading FrameProccessor ...")
-    fp = CaffeProcessor()
-    print("Loading HeadPoseEstimator ...")
-    hpe = HeadPoseEstimator()
-    print("Loading Filter ...")
-    filt = Filter(100)
-    print("Loading DecisionMaker ...")
-    dm = DecisionMaker(100, 10, 10, 10, 50)
-    print("Loading MacOSNotifier ...")
-    notifier = MacOSNotifier()
-    print(time.time() - t)
-
-
+def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstimator):
     # Initialize posture values 
     t = time.time() 
     init_counter = 0
@@ -59,8 +36,8 @@ if __name__ == '__main__':
     tot_roll = 0
 
     while time.time() < t + 20:
-        init_counter += 1
-        print(init_counter)
+        init_counter += 1.0
+        
         frame = fc.get_frame()
         frame_copy = frame.copy()
 
@@ -75,11 +52,47 @@ if __name__ == '__main__':
         tot_roll += roll
         tot_yaw += yaw
 
+    pos = (tot_centerX/init_counter, tot_centerY/init_counter)
+    area = tot_area/init_counter
+    head_pose = np.array([tot_yaw/init_counter, tot_pitch/init_counter, tot_roll/init_counter])
 
+
+    return pos, area, head_pose
+
+if __name__ == '__main__':
+    N = 30
+    t = time.time()
+    # Initialize stuff
+    t = time.time()
+    print("Loading FrameCapturer ...")
+    fc = FrameCapturer()
+    print("Loading FrameProccessor ...")
+    fp = CaffeProcessor()
+    print("Loading HeadPoseEstimator ...")
+    hpe = HeadPoseEstimator()
+    print("Loading Filters ...")
+    pos_y_filter = Filter(N)
+    area_filter = Filter(N)
+    roll_filter = Filter(N)
+    pitch_filter = Filter(N)
 
     
+    print("Loading DecisionMaker ...")
+    dm = DecisionMaker(10, 0.1, 0.1, 0.1, 5)
+    print("Loading MacOSNotifier ...")
+    notifier = MacOSNotifier()
+    print(time.time() - t)
+
+    # Initialize posture    
+    (posX, posY), area, head_pose = initialize_posture(fc, fp, hpe)
+    # Set refrence posture accordingly
+    dm.set_references(sqrt(area), head_pose, posY)
+
+
+
+    render = True
     quit = False
-    while (quit):
+    while (not quit):
 
         frame = fc.get_frame()
         frame_copy = frame.copy()
@@ -88,21 +101,35 @@ if __name__ == '__main__':
         face = fp.get_face(bbox, frame_copy)
         center = fp.get_center(bbox)
         area = fp.get_area(bbox)
+        area_filter.add_data(sqrt(area))
+        pos_y_filter.add_data(center[1])
+        # render if neccessary
+        if render: 
+            x, y, x2, y2 = bbox
+            rectangle(frame, (x, y), (x2, y2), (0,255,0), 1)
+            circle(frame, center, 5, (0,255,0), 1)
+            text = "Area = {}" .format(area)
+            putText(frame, text, (x, y), FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
 
-        x, y, x2, y2 = bbox
-        rectangle(frame, (x, y), (x2, y2), (0,255,0), 1)
-        circle(frame, center, 5, (0,255,0), 1)
-        text = "Area = {}" .format(area)
-        putText(frame, text, (x, y), FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
-
-        imshow('Frame', frame)
-        print(face.shape[0], face.shape[1])
+            imshow('Frame', frame)
+            
         if face.shape[0]>100 and face.shape[1]>100:
-            p, img = hpe.estimate_headpose(face, render = True)
-            imshow('Face', img)
+            (_, pitch, roll), img = hpe.estimate_headpose(face, render)
+            pitch_filter.add_data(pitch)
+            roll_filter.add_data(roll)
+            if render:
+                imshow('Face', img)
             
         else:
-            imshow('Face', BLACK_SCREEN)
+            if render:
+                imshow('Face', BLACK_SCREEN)
+        
+        head_angle = sqrt(roll_filter.get_smooth_data()**2 + pitch_filter.get_smooth_data()**2)
+        good_posture = dm.add_data(area_filter.get_smooth_data(), head_angle, pos_y_filter.get_smooth_data())
+        
+        if not good_posture:
+            notifier.send_notification(1, "Pose Malone Says")
+
         if waitKey(1) & 0xFF == ord('q'):
             break
 
