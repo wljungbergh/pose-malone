@@ -1,7 +1,7 @@
 import numpy as np
 '''
 Filter class
-Keeps track of given number of bounding boxes and their area. Outputs face distance. 
+Keeps track of data for given number of samples. Outputs mean of data over samples. 
 '''
 class Filter:
 
@@ -26,4 +26,3 @@ class Filter:
         array = np.roll(array, shift, axis)
         array[0] = new_element
         return array
-
