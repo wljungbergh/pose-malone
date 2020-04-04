@@ -73,8 +73,11 @@ class HeadPoseEstimator:
 
         if render:
             img = draw_axis(face_img, p_result[0][0], p_result[0][1], p_result[0][2])
+        yaw = p_result[0][0]
+        pitch = p_result[0][1]
+        roll = p_result[0][2]
 
-        return p_result, img
+        return (yaw, pitch, roll), img
 
 
 
