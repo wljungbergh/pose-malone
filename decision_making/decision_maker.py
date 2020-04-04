@@ -5,6 +5,14 @@ import numpy as np
 class Decision_maker:
 
     def __init__(self, samples_to_keep, distance_tolerance, head_angle_tolerance, face_height_tolerance, time_limit):
+        '''
+        Input:
+            samples_to_keep -- integer, specifying the number of samples to save
+            distance_tolerance -- double, tolerance for how much face may move closer to/further from camera from initial position
+            head_angle_tolerance -- double, how much the head may tilt away from original position before considered bad
+            face_height_tolerance -- double, how much the face may move down in the image before considered batch_dot
+            time_limit -- int, how many seconds a continously bad posture must be kept before notifying user
+        '''
         N = samples_to_keep
 
         self.face_distance = np.zeros([N,1])
@@ -25,11 +33,27 @@ class Decision_maker:
         self.last_notification_time = time.time()
     
     def set_references(self, face_distance_ref, head_angle_ref, face_height_ref):
+        '''
+        Set reference values for face distance, head angle and face height.
+        Must be called before adding data. 
+        '''
         self.face_distance_ref = face_distance_ref
         self.face_height_ref = face_height_ref
         self.head_angle_ref = head_angle_ref
 
     def add_data(self, face_dist, head_angle, face_height):
+        '''
+        Call method to add newly collected data to decision maker. Automatically adds timestamps for when method is called.
+        When new data is added, data is evaluated if posture is bad and for how long.
+
+        Input:
+            face_dist: double - current value for face distance from screen
+            head_angle: numpy array for current values of [roll, pitch, yaw]
+            face_height: double - current value for face height
+
+        Output:
+            boolean: False if user should be notified about posture. True otherwise.
+        '''
         self.add_face_distance(face_dist)
         self.add_head_angle(head_angle)
         self.add_face_height(face_height)
@@ -96,10 +120,10 @@ class Decision_maker:
         else:
             return True
 
-    '''
-    Sends a OS X style notification to the user
-    '''
     def notify(self, title, text):
+        '''
+        Sends a OS X style notification to the user
+        '''
         os.system("""
                 osascript -e 'display notification "{}" with title "{}"'
                 """.format(text, title))
@@ -108,8 +132,3 @@ class Decision_maker:
         array = np.roll(array, shift, axis)
         array[0] = new_element
         return array
-
-ds_maker = Decision_maker(10, 0.2, 19, 0.5, 30)
-ds_maker.set_references(2, np.array([0, 0, 0]), 0)
-no_notification_needed = ds_maker.add_data(0.2, np.array([0, 0, 0]), 0.1)
-print(1+1)
