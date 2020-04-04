@@ -91,10 +91,10 @@ def draw_results_ssd(detected,input_img,faces,ad,img_size,img_w,img_h,model,time
     return input_img #,time_network,time_plot
 
 def main():
-    try:
-        os.mkdir('./img')
-    except OSError:
-        pass
+    #try:
+    #    os.mkdir('./img')
+    #except OSError:
+    #    pass
 
     # face_cascade = cv2.CascadeClassifier('lbpcascade_frontalface_improved.xml')
     # detector = MTCNN()
@@ -203,7 +203,7 @@ def main():
             faces = np.empty((detected.shape[2], img_size, img_size, 3))
 
             input_img = draw_results_ssd(detected,input_img,faces,ad,img_size,img_w,img_h,model,time_detection,time_network,time_plot)
-            cv2.imwrite('img/'+str(img_idx)+'.png',input_img)
+            #cv2.imwrite('img/'+str(img_idx)+'.png',input_img)
             
         else:
             input_img = draw_results_ssd(detected,input_img,faces,ad,img_size,img_w,img_h,model,time_detection,time_network,time_plot)
