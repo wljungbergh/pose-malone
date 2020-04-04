@@ -10,7 +10,6 @@ class FrameCapturer:
     
     def __del__(self):
         self.capturer.release()
-
     
     def get_frame(self):
         ret, frame = self.capturer.read()

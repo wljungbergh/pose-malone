@@ -1,22 +1,30 @@
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(),'frame_capture')))
+print(sys.path)
+
 from cv2 import imread
 from cv2 import imshow
 from cv2 import rectangle
 from cv2 import waitKey
 from cv2 import destroyAllWindows
 from mtcnn import MTCNN
-from FrameProcessor import FrameProcessor
+from frame_processing import MTCNNProcessor
+from frame_processing import CaffeProcessor
+from frame_capture import FrameCapturer
 
 
-pixels = imread('FrameProcessing/test_img.jpg')
-print('Img shape: ', pixels.shape)
+capturer = FrameCapturer()
+detector = CaffeProcessor()
 
-classifier = FrameProcessor()
-x, y, w, h = classifier.process_frame(pixels)
+while True:
+    frame = capturer.get_frame()
+    face = detector.process_frame(frame)
 
-x2, y2 = x + w, y + h
-rectangle(pixels, (x, y), (x2, y2), (0,255,0), 1)
+    x, y, x2, y2 = face
+    rectangle(frame, (x, y), (x2, y2), (0,255,0), 1)
 
+    imshow('hej', frame)
+    if waitKey(1) & 0xFF == ord('q'):
+        break
 
-imshow('hej', pixels)
-waitKey(0)
 destroyAllWindows()
