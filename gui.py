@@ -1,3 +1,7 @@
+import numpy as np
+import tensorflow as tf
+tf.logging.set_verbosity(tf.logging.ERROR)
+
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -17,28 +21,42 @@ from notifier.notifier import MacOSNotifier
 REF_POS = []
 REF_AREA = []
 REF_HEAD_POSE = []
-
-N = 30
-# Initialize stuff
-print("Loading FrameCapturer ...")
-fc = FrameCapturer()
-print("Loading FrameProccessor ...")
-fp = CaffeProcessor()
-print("Loading HeadPoseEstimator ...")
-hpe = HeadPoseEstimator()
-print("Loading Filters ...")
-pos_y_filter = Filter(N)
-area_filter = Filter(N)
-roll_filter = Filter(N)
-pitch_filter = Filter(N)
-
-print("Loading DecisionMaker ...")
-dm = DecisionMaker(10, 0.1, 0.1, 0.1, 5)
-print("Loading MacOSNotifier ...")
-notifier = MacOSNotifier()
+FC = []
+FP = []
+HPE = []
+DM = []
+NOTIFIER = []
 
 
-def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstimator):
+def initialize_posture():   
+    global FC
+    global FP
+    global HPE
+    global DM
+    global NOTIFIER
+
+
+    # Load everything
+    N = 30
+    # Initialize stuff
+    print("Loading FrameCapturer ...")
+    FC = FrameCapturer()
+    print("Loading FrameProccessor ...")
+    FP = CaffeProcessor()
+    print("Loading HeadPoseEstimator ...")
+    HPE = HeadPoseEstimator()
+    print("Loading Filters ...")
+    pos_y_filter = Filter(N)
+    area_filter = Filter(N)
+    roll_filter = Filter(N)
+    pitch_filter = Filter(N)
+
+    print("Loading DecisionMaker ...")
+    DM = DecisionMaker(10, 0.1, 0.1, 0.1, 5)
+    print("Loading MacOSNotifier ...")
+    NOTIFIER = MacOSNotifier()
+    
+    
     # Initialize posture values 
     t = time.time() 
     init_counter = 0
@@ -52,19 +70,19 @@ def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstim
     while time.time() < t + 10:
         init_counter += 1.0
         
-        frame = fc.get_frame()
+        frame = FC.get_frame()
         frame_copy = frame.copy()
 
-        bbox = fp.get_bbox(frame)
-        face = fp.get_face(bbox, frame_copy)
-        centerX, centerY = fp.get_center(bbox)
+        bbox = FP.get_bbox(frame)
+        face = FP.get_face(bbox, frame_copy)
+        centerX, centerY = FP.get_center(bbox)
         tot_centerX += centerX
         tot_centerY += centerY
-        tot_area += fp.get_area(bbox)
-        #(yaw, pitch, roll), _  = hpe.estimate_headpose(face)
-        #tot_pitch += pitch
-        #tot_roll += roll
-        #tot_yaw += yaw
+        tot_area += FP.get_area(bbox)
+        (yaw, pitch, roll), _  = HPE.estimate_headpose(face)
+        tot_pitch += pitch
+        tot_roll += roll
+        tot_yaw += yaw
 
 
     global REF_POS
@@ -73,7 +91,7 @@ def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstim
 
     REF_POS = (tot_centerX/init_counter, tot_centerY/init_counter)
     REF_AREA = tot_area/init_counter
-    #REF_HEAD_POSE = np.array([tot_yaw/init_counter, tot_pitch/init_counter, tot_roll/init_counter])
+    REF_HEAD_POSE = np.array([tot_yaw/init_counter, tot_pitch/init_counter, tot_roll/init_counter])
 
 
 
@@ -90,8 +108,11 @@ class Worker(QtCore.QRunnable):
         print("Thread start") 
         time.sleep(5)
 
-        initialize_posture(fc, fp, hpe)
-        
+        initialize_posture()
+        self.window.close()
+
+
+        print(REF_POS, REF_AREA, REF_HEAD_POSE)
         print("Thread complete")
         
 
@@ -131,9 +152,6 @@ class StartWindow(QDialog):
 
         self.show()
 
-    def init_main(self):
-        worker = Worker()
-        self.threadpool.start(worker)
 
     def on_click(self):
         print('CLICK')
@@ -176,6 +194,7 @@ class LoadingWindow(QDialog):
     def show_window(self):
         self.show()
         worker = Worker()
+        worker.window = self
         self.threadpool.start(worker)
 
 
@@ -229,8 +248,5 @@ if __name__ == "__main__":
 
     gui = GUI()
 
-    print(REF_POS,
-            REF_AREA,
-            REF_HEAD_POSE)
 
     pass
