@@ -5,13 +5,14 @@ Keeps track of data for given number of samples. Outputs mean of data over sampl
 '''
 class Filter:
 
-    def __init__(self, samples_to_keep, shape = [1]):
+    def __init__(self, samples_to_keep, init_value = 0, shape = [1]):
         # Data-samples to use
         N = samples_to_keep
         # Shape 
         self.shape = shape
         # Raw data
-        self.data = np.empty([N, *shape])
+        
+        self.data = np.ones([N, *shape])*init_value
 
     def add_data(self, new_data):
         # Add new data box from external
