@@ -1,0 +1,6 @@
+opencv-python
+opencv-python-headless
+tensorflow==1.14.0
+PyQt5==5.14.
+numpy==1.16.4
+keras==2.3.1
