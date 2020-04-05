@@ -1,35 +1,7 @@
 import numpy as np
-from mtcnn import MTCNN
 from cv2.dnn import readNetFromCaffe
 from cv2.dnn import blobFromImage
 from cv2 import resize
-
-class MTCNNProcessor(MTCNN):
-    def __init__(self):
-        super().__init__()
-
-    def most_confident_face(self, faces):
-        print(len(faces))
-        confidences = [face['confidence'] for face in faces]
-        if not confidences:
-            face = []
-        else:
-            face = faces[np.argmax(confidences)]
-            print(confidences)
-        return face
-
-    def get_box_coords(self, face):
-        return face['box']
-
-    def process_frame(self, frame):
-        faces = self.detect_faces(frame)
-        face = self.most_confident_face(faces)
-        if not face:
-            box_coords = []
-        else:
-            box_coords = self.get_box_coords(face)
-        return box_coords
-
 
 class CaffeProcessor():
     def __init__(self):
