@@ -1,8 +1,9 @@
 # pose-malone
 HackTheCrisis20 Pose Estimator pose-malone.
 
-The Pose Estimator is made up of the following submodules.
+This repo contains submodules. Be sure to run `git submodule update --init --recursive` after cloning. To run the GUI simply go in to the top folder and run `main.py`. In order to more clearly see the underlying algorithm, instead run `tuning.py`. This comes with rendering in OpenCv.
 
+The Pose Estimator is made up of the following submodules.
 ### Frame Capture
 OpenCv is used to access the video feed from the webcam
 ### Frame Process
