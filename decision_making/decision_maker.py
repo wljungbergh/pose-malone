@@ -109,12 +109,14 @@ class DecisionMaker:
 
     def check_face_distance(self):
         if np.abs(self.face_distance[0] - self.face_distance_ref) > self.face_distance_tol:
+            print('FACE DIST')
             return False
         else:
             return True
 
     def check_face_height(self):
         if np.abs(self.face_height[0] - self.face_height_ref) > self.face_height_tol:
+            print('FACE HEIGHT')
             return False
         else:
             return True
@@ -123,6 +125,7 @@ class DecisionMaker:
         relative_angle = self.head_angle[0]-self.head_angle_ref
         off_angle = np.sqrt(relative_angle[1]**2 + relative_angle[2]**2)
         if off_angle > self.head_angle_tol:
+            print('ANGLE')
             return False
         else:
             return True

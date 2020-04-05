@@ -1,8 +1,13 @@
-import tensorflow as tf
 import numpy as np
-
+import tensorflow as tf
 tf.logging.set_verbosity(tf.logging.ERROR)
 
+from PyQt5 import QtGui
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5 import QtCore
+import sys
+import time
 
 from decision_making.decision_maker import DecisionMaker
 from filtering.filter import Filter
@@ -11,20 +16,45 @@ from headpose_estimator.headpose_estimator import HeadPoseEstimator
 from frame_processing.frame_processing import CaffeProcessor
 from notifier.notifier import MacOSNotifier
 
-import time
-from math import sqrt
 
-from cv2 import FONT_HERSHEY_SIMPLEX
-from cv2 import imread, imshow
-from cv2 import rectangle, circle, putText
-from cv2 import waitKey
-from cv2 import destroyAllWindows
+# GLOBAL VARIABLES
+REF_POS = []
+REF_AREA = []
+REF_HEAD_POSE = []
+FC = []
+FP = []
+HPE = []
+DM = []
+NOTIFIER = []
 
 
-BLACK_SCREEN = np.ones((400,400,3))*int(255)
+def initialize_posture():   
+    global FC
+    global FP
+    global HPE
+    global DM
+    global NOTIFIER
 
+    # Load everything
+    N = 100
+    # Initialize stuff
+    print("Loading FrameCapturer ...")
+    FC = FrameCapturer()
+    print("Loading FrameProccessor ...")
+    FP = CaffeProcessor()
+    print("Loading HeadPoseEstimator ...")
+    HPE = HeadPoseEstimator()
+    print("Loading Filters ...")
+    pos_y_filter = Filter(N)
+    area_filter = Filter(N)
+    roll_filter = Filter(N)
+    pitch_filter = Filter(N)
 
-def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstimator):
+    print("Loading DecisionMaker ...")
+    DM = DecisionMaker(10, 50, 15, 50, 30)
+    print("Loading MacOSNotifier ...")
+    NOTIFIER = MacOSNotifier()
+    
     # Initialize posture values 
     t = time.time() 
     init_counter = 0
@@ -35,108 +65,153 @@ def initialize_posture(fc: FrameCapturer, fp: CaffeProcessor, hpe: HeadPoseEstim
     tot_pitch = 0
     tot_roll = 0
 
-    while time.time() < t + 5:
+    while time.time() < t + 10:
         init_counter += 1.0
         
-        frame = fc.get_frame()
+        frame = FC.get_frame()
         frame_copy = frame.copy()
 
-        bbox = fp.get_bbox(frame)
-        face = fp.get_face(bbox, frame_copy)
-        centerX, centerY = fp.get_center(bbox)
+        bbox = FP.get_bbox(frame)
+        face = FP.get_face(bbox, frame_copy)
+        centerX, centerY = FP.get_center(bbox)
         tot_centerX += centerX
         tot_centerY += centerY
-        tot_area += fp.get_area(bbox)
-        (yaw, pitch, roll), _  = hpe.estimate_headpose(face)
+        tot_area += FP.get_area(bbox)
+        (yaw, pitch, roll), _  = HPE.estimate_headpose(face)
         tot_pitch += pitch
         tot_roll += roll
         tot_yaw += yaw
 
-    pos = (tot_centerX/init_counter, tot_centerY/init_counter)
-    area = tot_area/init_counter
-    head_pose = np.array([tot_yaw/init_counter, tot_pitch/init_counter, tot_roll/init_counter])
+    global REF_POS
+    global REF_AREA
+    global REF_HEAD_POSE
 
+    REF_POS = (tot_centerX/init_counter, tot_centerY/init_counter)
+    REF_AREA = tot_area/init_counter
+    REF_HEAD_POSE = np.array([tot_yaw/init_counter, tot_pitch/init_counter, tot_roll/init_counter])
 
-    return pos, area, head_pose
+class Worker(QtCore.QRunnable):
+    @QtCore.pyqtSlot()
+    def run(self):
+        print("Thread start") 
+        time.sleep(5)
 
-if __name__ == '__main__':
-    N = 2
-    # Initialize stuff
-    print("Loading FrameCapturer ...")
-    fc = FrameCapturer()
-    print("Loading FrameProccessor ...")
-    fp = CaffeProcessor()
-    print("Loading HeadPoseEstimator ...")
-    hpe = HeadPoseEstimator()
-    print("Loading Filters ...")
-    pos_y_filter = Filter(N)
-    area_filter = Filter(N)
-    roll_filter = Filter(N)
-    pitch_filter = Filter(N)
-    
-    
-    print("Loading DecisionMaker ...")
-    dm = DecisionMaker(10, 5, 5, 1, 5)
-    print("Loading MacOSNotifier ...")
-    notifier = MacOSNotifier()
-    
+        initialize_posture()
+        self.window.close()
 
-    # Initialize posture    
-    print("Starting initialize posture...")
-    (posX, posY), area, head_pose = initialize_posture(fc, fp, hpe)
-    print("Finished initialize posture...")
-    # Set refrence posture accordingly
-    print("posY ref: {}".format(posY))
-    print("area ref: {}".format(area))
-    print("head_pose ref: {}".format(head_pose))
-    dm.set_references(sqrt(area), head_pose, posY)
-
-
-
-    render = True
-    quit = False
-    while (not quit):
-
-        frame = fc.get_frame()
-        frame_copy = frame.copy()
-
-        bbox = fp.get_bbox(frame)
-        face = fp.get_face(bbox, frame_copy)
-        center = fp.get_center(bbox)
-        area = fp.get_area(bbox)
-        area_filter.add_data(sqrt(area))
-        print("ypos: {}".format(center[1]))
-        print("area: {}".format(sqrt(area)))
-        pos_y_filter.add_data(center[1])
-        # render if neccessary
-        if render: 
-            x, y, x2, y2 = bbox
-            rectangle(frame, (x, y), (x2, y2), (0,255,0), 1)
-            circle(frame, center, 5, (0,255,0), 1)
-            text = "Area = {}" .format(area)
-            putText(frame, text, (x, y), FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
-
-            imshow('Frame', frame)
-            
-        if face.shape[0]>100 and face.shape[1]>100:
-            (yaw, pitch, roll), img = hpe.estimate_headpose(face, render)
-            pitch_filter.add_data(pitch)
-            roll_filter.add_data(roll)
-            if render:
-                imshow('Face', face)
-            
-        else:
-            if render:
-                imshow('Face', BLACK_SCREEN)
+        print(REF_POS, REF_AREA, REF_HEAD_POSE)
+        print("Thread complete")
         
-        head_pos = [0, pitch_filter.get_smooth_data(), roll_filter.get_smooth_data()]
-        good_posture = dm.add_data(area_filter.get_smooth_data(), np.array(head_pos), pos_y_filter.get_smooth_data())
-        print("Good posture? {}".format(good_posture))
-        #if not good_posture:
-        #    notifier.send_notification(1, "Pose Malone Says")
 
-        if waitKey(1) & 0xFF == ord('q'):
-            break
+class StartWindow(QDialog):
+    def __init__(self, desktop_width, desktop_height):
+        super().__init__()
+        self.title = "Welcome!"
+        self.width = 720
+        self.height = 405
+        self.top = desktop_height/2 - self.height/2
+        self.left = desktop_width/2 - self.width/2
 
-    
-print("DONE...")
+        self.init_window()
+        self.loading_window = LoadingWindow(desktop_width, desktop_height)
+
+    def init_window(self):
+        self.setWindowIcon(QtGui.QIcon("doc/icon_images/icon.png"))
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+        vbox = QVBoxLayout()
+        labelImage = QLabel(self)
+        pixmap = QPixmap("doc/initial_images/color/initial.png")
+        labelImage.setPixmap(pixmap)
+        vbox.addWidget(labelImage)
+        self.setLayout(vbox)
+
+        button = QPushButton('Start Application', self)
+        button.move(500, 180)
+        button.clicked.connect(self.on_click)
+
+        self.show()
+
+    def on_click(self):
+        print('CLICK')
+        self.close()
+        self.loading_window.show_window()
+
+class LoadingWindow(QDialog):
+    def __init__(self, desktop_width, desktop_height):
+        super().__init__()
+        self.title = "Initializing..."
+        self.width = 720
+        self.height = 405
+        self.top = desktop_height/2 - self.height/2
+        self.left = desktop_width/2 - self.width/2
+
+        self.threadpool = QtCore.QThreadPool()
+        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+
+        self.init_window()
+
+    def init_window(self):
+
+        self.setWindowIcon(QtGui.QIcon("doc/icon_images/icon.png"))
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+        vbox = QVBoxLayout()
+        labelImage = QLabel(self)
+        pixmap = QPixmap("doc/initial_images/color/waiting.png")
+        labelImage.setPixmap(pixmap)
+        vbox.addWidget(labelImage)
+        self.setLayout(vbox)
+        
+
+    def show_window(self):
+        self.show()
+        worker = Worker()
+        worker.window = self
+        self.threadpool.start(worker)
+
+class StatusBar():
+    def __init__(self):
+        self.icon = QIcon("doc/icon_images/icon.png")
+
+        self.tray = QSystemTrayIcon()
+        self.tray.setIcon(self.icon)
+        self.tray.setVisible(True)
+
+        self.menu = QMenu()
+        self.reset = QAction("Reset")
+        self.reset.triggered.connect(self.reset_posture)
+
+        self.exit = QAction("Quit")
+        self.exit.triggered.connect(self.exit_app)
+
+        self.menu.addAction(self.reset)
+        self.menu.addAction(self.exit)
+
+        self.tray.setContextMenu(self.menu)
+
+    def reset_posture(self):
+        print('RESET POSTURE')
+
+    def exit_app(self):
+        QtCore.QCoreApplication.exit()
+
+class Application():
+    def __init__(self):
+        self.app = QApplication([])
+        self.app.setStyle('Fusion')
+        self.app.setQuitOnLastWindowClosed(False)
+        self.start_gui()  
+
+    def start_gui(self):
+        screen_res = self.app.desktop().screenGeometry()
+        desktop_width = screen_res.width()
+        desktop_height = screen_res.height()
+        
+        start_window = StartWindow(desktop_width, desktop_height)
+        status_bar = StatusBar()
+        self.app.exec()
+
+
+if __name__ == "__main__":
+    gui = Application()
